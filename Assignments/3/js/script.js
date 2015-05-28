@@ -34,6 +34,15 @@
     console.log('Array [' + array + '] items multiplication result:', fold(array, multiply));
     console.log('Array [' + array + '] items multiplication result, initial multiplier 10x:', fold(array, multiply, 10));
 
-// Does ES5 has built-in alternative?
-// Yes: Array.prototype.reduce()
+    // Does ES5 has built-in alternative?
+    // Yes: Array.prototype.reduce()
+    console.log(
+        'Array [' + array + '] items multiplication result via Array.prototype.reduce():',
+        array.reduce(multiply)
+    );
+    console.log(
+        'Array [' + array + '] items multiplication result via Array.prototype.reduce():',
+        array.reduce(multiply, 10)
+    );
+
 })();
