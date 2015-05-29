@@ -1,7 +1,7 @@
 (function () {
     'use strict';
 
-    var numbersArray = [1, 23, 2, 6, 12, 8, 14, 33, 42] ;
+    var numbersArray = [1, 23, 2, 6, 12, 8, 14, 33, 42];
 
     // Filter function.
     function filter(sourceArray, callback) {
