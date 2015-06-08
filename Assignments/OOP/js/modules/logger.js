@@ -5,28 +5,72 @@ define(function() {
      * Default options for library.
      */
 
-    var defaultLoggerName = '[Default Logger]';
     var defaultCustomLoggerName = '[Custom Logger]';
+    var defaultEventListenerName = '[Event Listener]';
     var defaultDateFormat = 'full';
     var defaultTextColor = '#000000';
 
     /*
-     * Handling uncaught exceptions.
+     * HTML console markup
+     * ===================
      */
 
+    var consoleHtml = [
+        '<div class="custom-console" style="position: fixed; bottom: 10px; right: 10px; width: 500px;">',
+        '    <div class="console-label" style="display: inline-block; top: -23px; left: -3px; padding: 0 5px; background-color: #cccccc; line-height: 20px;">Console:</div>',
+        '    <div id="custom-console-content" style="height: 150px; background-color: #dddddd; padding: 5px; border: 3px solid #cccccc;"></div>',
+        '</div>',
+        ''
+    ];
+
+    // Appending console markup to the end of <body>.
+    document.body.innerHTML += consoleHtml.reduce(function (previousString, currentString) {
+        return previousString + currentString;
+    });
+
+    /*
+     * Handling uncaught exceptions
+     * ============================
+     */
+
+    /*
+     * Global JavaScript error handling.
+     */
     window.onerror = function (errorMessage, url, line) {
-        if (logger.logUncaughtExceptions) 
-            outputWindow(
-                defaultLoggerName,
-                formatDateString(new Date(), defaultDateFormat),
-                errorMessage + ', on line ' + line + ', here: ' + url);
+        if (logger.logUncaughtExceptions) {
+            var date = formatDateString(new Date(), defaultDateFormat);
+            console.log('[' + date + '] ' + errorMessage + ', on line ' + line + ', here: ' + url);
+        }
         return false;
     };
 
     /*
-     * Utility functions.
+     * Utility functions
+     * =================
      */
 
+    /*
+     * Function for pseudo-classical inheritance pattern implementation.
+     *
+     * @param {function} Child Child function that would be extended using Parent function.
+     * @param {function} Parent Function that extends child.
+     */
+    function extend(Child, Parent) {
+        var F = function () {};
+        F.prototype = Parent.prototype;
+
+        Child.prototype = new F();
+        Child.prototype.constructor = Child;
+        Child.superclass = Parent.prototype;
+    }
+
+    /*
+     * Function for work with dates. Formats and returns given date in pre-defined format.
+     *
+     * @param {date object} dateObject Javascript native date object.
+     * @param {string} format String containing format name.
+     * @return {string} String containing rendered date ready for output.
+     */
     function formatDateString(dateObject, format) {
         var date;
         switch(format) {
@@ -40,107 +84,210 @@ define(function() {
     }
 
     /*
-     * Common functions, that are used by both default and custom logger methods.
+     * Custom logger constructor
+     * =========================
      */
-
-    function outputConsole(name, date, message) {
-        console.log(name + ' [' + date + ']: ' + message);
-    }
-
-    function outputAlert(name, date, message) {
-        alert(name + ' [' + date + ']: ' + message);
-    }
-
-    function outputWindow(name, date, message, color) {
-        var div = document.getElementById('custom-console');
-        var messageContainer = document.createElement('DIV');
-        messageContainer.innerHTML = name + ' [' + date + ']: ' + message;
-        if (color) messageContainer.setAttribute('style', 'color: ' + color);
-        div.appendChild(messageContainer);
-    }
-
-    function outputRemote(name, date, message) {
-        var request = new XMLHttpRequest();
-        var url = 'http://localhost:8080/somewhere';
-        request.open('POST', url, true);
-        request.setRequestHeader('Content-type','application/x-www-form-urlencoded');
-        request.send(name + ' [' + date + ']: ' + message);
-        request.onreadystatechange = function() {
-            if (request.readyState == 4) {
-                // Request response can be processed here.
-                // Not doing this because this library is created in educational purposes.
-            }
-        };
-    }
 
     /*
-     * Custom logger constructor.
+     * Constructor for Logger class.
+     *
+     * @param {object} options Object containing logger options.
      */
-
     function LoggerConstructor(options) {
         this.name = (options && options.name) || defaultCustomLoggerName;
         this.dateFormat = (options && options.dateFormat) || defaultDateFormat;
         this.color = (options && options.color) || defaultTextColor;
     }
 
-    LoggerConstructor.prototype.writeToConsole = function (message) {
-        outputConsole(this.name, formatDateString(new Date(), this.dateFormat), message);
-    };
+    LoggerConstructor.prototype = {
+        constructor: LoggerConstructor,
 
-    LoggerConstructor.prototype.writeToAlert = function (message) {
-        outputAlert(this.name, formatDateString(new Date(), this.dateFormat), message);
-    };
+        /*
+         * Outputs message to the browser console.
+         *
+         * @param {string} message Text message for output.
+         */
+        writeToConsole: function (message) {
+            var date = formatDateString(new Date(), this.dateFormat);
+            console.log(this.name + ' [' + date + ']: ' + message);
+        },
 
-    LoggerConstructor.prototype.writeToWindow = function (message) {
-        outputWindow(this.name, formatDateString(new Date(), this.dateFormat), message, this.color);
-    };
+        /*
+         * Outputs javascript alert window with given message.
+         *
+         * @param {string} message Text message for output.
+         */
+        writeToAlert: function (message) {
+            var date = formatDateString(new Date(), this.dateFormat);
+            alert(this.name + ' [' + date + ']: ' + message);
+        },
 
-    LoggerConstructor.prototype.writeToRemote = function (message) {
-        outputRemote(this.name, formatDateString(new Date(), this.dateFormat), message);
+        /*
+         * Outputs given message to HTML console window.
+         *
+         * @param {string} message Text message for output.
+         */
+        writeToWindow: function (message) {
+            var date = formatDateString(new Date(), this.dateFormat);
+            var div = document.getElementById('custom-console-content');
+            var messageContainer = document.createElement('DIV');
+            messageContainer.innerHTML = this.name + ' [' + date + ']: ' + message;
+            if (this.color) messageContainer.setAttribute('style', 'color: ' + this.color);
+            div.appendChild(messageContainer);
+        },
+
+        /*
+         * Sends given message to abstract web API endpoint.
+         *
+         * @param {string} message Text message for output.
+         */
+        writeToRemote: function (message) {
+            var date = formatDateString(new Date(), this.dateFormat);
+            var request = new XMLHttpRequest();
+            request.open('POST', 'http://localhost:8080/somewhere', true);
+            request.setRequestHeader('Content-type','application/x-www-form-urlencoded');
+            request.send(this.name + ' [' + date + ']: ' + message);
+            request.onreadystatechange = function() {
+                if (request.readyState == 4) {
+                    // Request response can be processed here.
+                    // Not doing this because this library is created in educational purposes.
+                }
+            };
+        }
     };
 
     /*
-     * Event listener constructor.
+     * Event listener constructor
+     * ==========================
      */
 
-    function EventListener() {
+    /*
+     * Constructor for event listener class. Event listener supports callbacks, though
+     * they are optional.
+     */
+    function EventListenerConstructor(options) {
+        EventListenerConstructor.superclass.constructor.call(this, options);
 
+        // Array to contain events in current event listener instance.
+        this.events = {};
+
+        this.name = (options && options.name) || defaultEventListenerName;
+        this.notificationType = (options && options.notificationType) || 'console';
     }
+
+    // EventListenerConstructor inherits LoggerConstructor, so logging methods would be available for it.
+    extend(EventListenerConstructor, LoggerConstructor);
+
+    /*
+     * Adding event listener for specified event. Function checks if event with provided name
+     * already exists. In that case no new event listener is created.
+     *
+     * @param {string} eventName Name of the event.
+     * @param {function} callback Function that would be called when event occurs.
+     * @return {Object} Current instance of EventListener for chaining.
+     */
+    EventListenerConstructor.prototype.addEvent = function (eventName, callback) {
+        var message;
+
+        // Checking if user-provided event name is string.
+        if (typeof eventName !== 'string') {
+            message = 'Please provide appropriate event name (string). No event created.';
+            this.writeToConsole(message);
+            return this;
+        }
+
+        // Checking if event already exist.
+        if (!this.events.hasOwnProperty(eventName)) {
+            this.events[eventName] = {
+                callback: callback
+            };
+        } else {
+            message = 'Event with that name already exist. No event created.';
+            this.writeToConsole(message);
+        }
+
+        return this;
+    };
+
+    /*
+     * Removing event listener.
+     *
+     * @param {string} eventName Name of the event to look for in event container object.
+     * @return {Object} Current instance of EventListener for chaining.
+     */
+    EventListenerConstructor.prototype.removeEvent = function (eventName) {
+        var message;
+
+        // Checking if event exists.
+        if (this.events.hasOwnProperty(eventName)) {
+            delete this.events[eventName];
+        } else {
+            message = 'There is no such event. Nothing to remove.';
+            this.writeToConsole(message);
+        }
+        
+        return this;
+    };
+
+    /*
+     * This method is for dispatching events.
+     * It invokes callback function, if it was provided when event was created.
+     *
+     * @param {string} eventName Name of the event to dispatch.
+     * @param {string} notificationType Type of message that would appear in case event occurs.
+     * @return {Object} Current instance of EventListener for chaining.
+     */
+    EventListenerConstructor.prototype.dispatchEvent = function (eventName, notificationType) {
+        var message;
+        notificationType = notificationType || this.notificationType;
+
+        // Checking if event exists.
+        if (this.events.hasOwnProperty(eventName)) {
+
+            var callback = this.events[eventName].callback;
+            if (callback && typeof callback === 'function') this.events[eventName].callback.call(this);
+
+            message = 'Event \'' + eventName + '\' occured.';
+            switch (notificationType) {
+                case 'alert':
+                    this.writeToAlert(message);
+                    break;
+                case 'window':
+                    this.writeToWindow(message);
+                    break;
+                case 'remote':
+                    this.writeToRemote(message);
+                    break;
+                default:
+                    this.writeToConsole(message);
+                    break;
+            }
+        
+        } else {
+
+            message = 'There is no such event. Nothing to emit.';
+            this.writeToConsole(message);
+
+        }
+
+        return this;
+    };
 
     /*
      * Public API
+     * ==========
      */
 
     var logger = {
 
-        logUncaughtExceptions: true,
-
-        writeToConsole: function (message) {
-            var date = new Date();
-            outputConsole(defaultLoggerName, date, message);
-        },
-
-        writeToAlert: function (message) {
-            var date = new Date();
-            outputAlert(defaultLoggerName, date, message);
-        },
-
-        writeToWindow: function (message) {
-            var date = new Date();
-            outputWindow(defaultLoggerName, date, message);
-        },
-
-        writeToRemote: function (message) {
-            var date = new Date();
-            outputRemote(defaultLoggerName, date, message);
-        },
+        logUncaughtExceptions: false,
 
         createLogger: function (options) {
             return new LoggerConstructor(options);
         },
 
-        createEventListener: function (subscription, logger) {
-
+        createEventListener: function (options) {
+            return new EventListenerConstructor(options);
         }
 
     };
