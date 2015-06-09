@@ -1,3 +1,9 @@
+/*
+ * Client-side logging library v1.0
+ *
+ * This library is created in test purposes. API documentation and usage examples can be found in 'app.js' file.
+ */
+
 define(function() {
     'use strict';
 
@@ -5,7 +11,7 @@ define(function() {
      * Default options for library.
      */
 
-    var defaultCustomLoggerName = '[Custom Logger]';
+    var defaultCustomLoggerName = '[Logger]';
     var defaultEventListenerName = '[Event Listener]';
     var defaultDateFormat = 'full';
     var defaultTextColor = '#000000';
@@ -38,7 +44,7 @@ define(function() {
      */
     window.onerror = function (errorMessage, url, line) {
         if (logger.logUncaughtExceptions) {
-            var date = formatDateString(new Date(), defaultDateFormat);
+            var date = getCurrentDate(defaultDateFormat);
             console.log('[' + date + '] ' + errorMessage + ', on line ' + line + ', here: ' + url);
         }
         return false;
@@ -65,20 +71,20 @@ define(function() {
     }
 
     /*
-     * Function for work with dates. Formats and returns given date in pre-defined format.
+     * Function for work with dates. Formats and returns current date in pre-defined format.
      *
-     * @param {date object} dateObject Javascript native date object.
-     * @param {string} format String containing format name.
+     * @param {string} format Format name. Can be 'full' or 'short'.
      * @return {string} String containing rendered date ready for output.
      */
-    function formatDateString(dateObject, format) {
+    function getCurrentDate(format) {
+        var currentDate = new Date();
         var date;
         switch(format) {
-            case 'full':
-                date = dateObject.toString();
-                return date;
             case 'short':
-                date = dateObject.getHours() + ':' + dateObject.getMinutes() + ':' + dateObject.getSeconds();
+                date = currentDate.getHours() + ':' + currentDate.getMinutes() + ':' + currentDate.getSeconds();
+                return date;
+            default:
+                date = currentDate.toString();
                 return date;
         }
     }
@@ -108,8 +114,13 @@ define(function() {
          * @param {string} message Text message for output.
          */
         writeToConsole: function (message) {
-            var date = formatDateString(new Date(), this.dateFormat);
-            console.log(this.name + ' [' + date + ']: ' + message);
+            if (message) {
+                var date = getCurrentDate(this.dateFormat);
+                console.log(this.name + ' [' + date + ']: ' + message);
+            } else {
+                message = 'Please provide message for output.';
+                this.writeToConsole(message);
+            }
         },
 
         /*
@@ -118,8 +129,13 @@ define(function() {
          * @param {string} message Text message for output.
          */
         writeToAlert: function (message) {
-            var date = formatDateString(new Date(), this.dateFormat);
-            alert(this.name + ' [' + date + ']: ' + message);
+            if (message) {
+                var date = getCurrentDate(this.dateFormat);
+                alert(this.name + ' [' + date + ']: ' + message);
+            } else {
+                message = 'Nothing to alert. Please provide message for output.';
+                this.writeToConsole(message);
+            }
         },
 
         /*
@@ -128,12 +144,17 @@ define(function() {
          * @param {string} message Text message for output.
          */
         writeToWindow: function (message) {
-            var date = formatDateString(new Date(), this.dateFormat);
-            var div = document.getElementById('custom-console-content');
-            var messageContainer = document.createElement('DIV');
-            messageContainer.innerHTML = this.name + ' [' + date + ']: ' + message;
-            if (this.color) messageContainer.setAttribute('style', 'color: ' + this.color);
-            div.appendChild(messageContainer);
+            if (message) {
+                var date = getCurrentDate(this.dateFormat);
+                var div = document.getElementById('custom-console-content');
+                var messageContainer = document.createElement('DIV');
+                messageContainer.innerHTML = this.name + ' [' + date + ']: ' + message;
+                if (this.color) messageContainer.setAttribute('style', 'color: ' + this.color);
+                div.appendChild(messageContainer);
+            } else {
+                message = 'Nothing to output. Please provide message.';
+                this.writeToConsole(message);
+            }
         },
 
         /*
@@ -142,17 +163,22 @@ define(function() {
          * @param {string} message Text message for output.
          */
         writeToRemote: function (message) {
-            var date = formatDateString(new Date(), this.dateFormat);
-            var request = new XMLHttpRequest();
-            request.open('POST', 'http://localhost:8080/somewhere', true);
-            request.setRequestHeader('Content-type','application/x-www-form-urlencoded');
-            request.send(this.name + ' [' + date + ']: ' + message);
-            request.onreadystatechange = function() {
-                if (request.readyState == 4) {
-                    // Request response can be processed here.
-                    // Not doing this because this library is created in educational purposes.
-                }
-            };
+            if (message) {
+                var date = getCurrentDate(this.dateFormat);
+                var request = new XMLHttpRequest();
+                request.open('POST', 'http://localhost:8080/somewhere', true);
+                request.setRequestHeader('Content-type','application/x-www-form-urlencoded');
+                request.send(this.name + ' [' + date + ']: ' + message);
+                request.onreadystatechange = function() {
+                    if (request.readyState == 4) {
+                        // Request response can be processed here.
+                        // Not doing this because this library is created in educational purposes.
+                    }
+                };
+            } else {
+                message = 'Nothing to send. Please provide message.';
+                this.writeToConsole(message);
+            }
         }
     };
 
@@ -265,7 +291,7 @@ define(function() {
         
         } else {
 
-            message = 'There is no such event. Nothing to emit.';
+            message = 'There is no such event. No event was dispatched.';
             this.writeToConsole(message);
 
         }
@@ -279,17 +305,14 @@ define(function() {
      */
 
     var logger = {
-
         logUncaughtExceptions: false,
 
         createLogger: function (options) {
             return new LoggerConstructor(options);
         },
-
         createEventListener: function (options) {
             return new EventListenerConstructor(options);
         }
-
     };
 
     return logger;
