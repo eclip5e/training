@@ -33,6 +33,7 @@ define(function() {
     document.body.innerHTML += consoleHtml.reduce(function (previousString, currentString) {
         return previousString + currentString;
     });
+    var HTMLConsole = document.getElementById('custom-console-content');
 
     /*
      * Handling uncaught exceptions
@@ -56,21 +57,6 @@ define(function() {
      */
 
     /*
-     * Function for pseudo-classical inheritance pattern implementation.
-     *
-     * @param {function} Child Child function that would be extended using Parent function.
-     * @param {function} Parent Function that extends child.
-     */
-    function extend(Child, Parent) {
-        var F = function () {};
-        F.prototype = Parent.prototype;
-
-        Child.prototype = new F();
-        Child.prototype.constructor = Child;
-        Child.superclass = Parent.prototype;
-    }
-
-    /*
      * Function for work with dates. Formats and returns current date in pre-defined format.
      *
      * @param {string} format Format name. Can be 'full' or 'short'.
@@ -87,6 +73,73 @@ define(function() {
                 date = currentDate.toString();
                 return date;
         }
+    }
+
+    /*
+     * Function creates and returns message string ready for output.
+     *
+     * @param {string} message Raw text message provided bu yser.
+     * @param {string} dateFormat Date output format. Can be 'short' or 'full'.
+     * @param {string} loggerName Name of the current logger instance.
+     * @return {string} Rendered message ready for output.
+     */
+    function renderMessageString(message, dateFormat, loggerName) {
+        var date = getCurrentDate(dateFormat);
+        return loggerName + ' [' + date + ']: ' + message;
+    }
+
+    /*
+     * Private functions
+     * =================
+     */
+
+    /*
+     * Function that raises JavaScript alert.
+     *
+     * @param {string} message Rendered message ready for output.
+     */
+    function printAlert(message) {
+        alert(message);
+    }
+
+    /*
+     * Function that outputs message to browser console.
+     *
+     * @param {string} message Rendered message ready for output.
+     */
+    function printConsole(message) {
+        console.log(message);
+    }
+
+    /*
+     * Function outputs message to HTML console.
+     *
+     * @param {string} message Rendered message ready for output.
+     * @param {string} color Color for text in HTML console in any CSS-valid format.
+     */
+    function printWindow(message, color) {
+        var messageContainer = document.createElement('DIV');
+        messageContainer.innerHTML = message;
+        if (color) messageContainer.setAttribute('style', 'color: ' + color);
+        HTMLConsole.appendChild(messageContainer);
+    }
+
+    /*
+     * Function outputs message to abstract web API endpoint.
+     *
+     * @param {string} message Rendered message ready for output.
+     */
+    function printRemote(message) {
+        var request = new XMLHttpRequest();
+        request.open('POST', 'http://localhost:8080/somewhere', true);
+        request.setRequestHeader('Content-type','application/x-www-form-urlencoded');
+        request.send(message);
+        request.onreadystatechange = function() {
+            if (request.readyState == 4) {
+                // Request response can be processed here.
+                // Not doing this because this library is created in educational purposes.
+            }
+        };
     }
 
     /*
@@ -109,32 +162,32 @@ define(function() {
         constructor: LoggerConstructor,
 
         /*
-         * Outputs message to the browser console.
-         *
-         * @param {string} message Text message for output.
-         */
-        writeToConsole: function (message) {
-            if (message) {
-                var date = getCurrentDate(this.dateFormat);
-                console.log(this.name + ' [' + date + ']: ' + message);
-            } else {
-                message = 'Please provide message for output.';
-                this.writeToConsole(message);
-            }
-        },
-
-        /*
          * Outputs javascript alert window with given message.
          *
          * @param {string} message Text message for output.
          */
         writeToAlert: function (message) {
             if (message) {
-                var date = getCurrentDate(this.dateFormat);
-                alert(this.name + ' [' + date + ']: ' + message);
+                var renderedMessage = renderMessageString(message, this.dateFormat, this.name);
+                printAlert(renderedMessage);
             } else {
                 message = 'Nothing to alert. Please provide message for output.';
-                this.writeToConsole(message);
+                printConsole(message);
+            }
+        },
+
+        /*
+         * Outputs message to the browser console.
+         *
+         * @param {string} message Text message for output.
+         */
+        writeToConsole: function (message) {
+            if (message) {
+                var renderedMessage = renderMessageString(message, this.dateFormat, this.name);
+                printConsole(renderedMessage);
+            } else {
+                message = 'Please provide message for output.';
+                printConsole(message);
             }
         },
 
@@ -145,15 +198,11 @@ define(function() {
          */
         writeToWindow: function (message) {
             if (message) {
-                var date = getCurrentDate(this.dateFormat);
-                var div = document.getElementById('custom-console-content');
-                var messageContainer = document.createElement('DIV');
-                messageContainer.innerHTML = this.name + ' [' + date + ']: ' + message;
-                if (this.color) messageContainer.setAttribute('style', 'color: ' + this.color);
-                div.appendChild(messageContainer);
+                var renderedMessage = renderMessageString(message, this.dateFormat, this.name);
+                printWindow(renderedMessage, this.color);
             } else {
                 message = 'Nothing to output. Please provide message.';
-                this.writeToConsole(message);
+                printConsole(message);
             }
         },
 
@@ -164,20 +213,11 @@ define(function() {
          */
         writeToRemote: function (message) {
             if (message) {
-                var date = getCurrentDate(this.dateFormat);
-                var request = new XMLHttpRequest();
-                request.open('POST', 'http://localhost:8080/somewhere', true);
-                request.setRequestHeader('Content-type','application/x-www-form-urlencoded');
-                request.send(this.name + ' [' + date + ']: ' + message);
-                request.onreadystatechange = function() {
-                    if (request.readyState == 4) {
-                        // Request response can be processed here.
-                        // Not doing this because this library is created in educational purposes.
-                    }
-                };
+                var renderedMessage = renderMessageString(message, this.dateFormat, this.name);
+                printRemote(renderedMessage);
             } else {
                 message = 'Nothing to send. Please provide message.';
-                this.writeToConsole(message);
+                printConsole(message);
             }
         }
     };
@@ -192,17 +232,14 @@ define(function() {
      * they are optional.
      */
     function EventListenerConstructor(options) {
-        EventListenerConstructor.superclass.constructor.call(this, options);
+        this.name = (options && options.name) || defaultEventListenerName;
+        this.dateFormat = (options && options.dateFormat) || defaultDateFormat;
+        this.color = (options && options.color) || defaultTextColor;
+        this.notificationType = (options && options.notificationType) || 'console';
 
         // Array to contain events in current event listener instance.
         this.events = {};
-
-        this.name = (options && options.name) || defaultEventListenerName;
-        this.notificationType = (options && options.notificationType) || 'console';
     }
-
-    // EventListenerConstructor inherits LoggerConstructor, so logging methods would be available for it.
-    extend(EventListenerConstructor, LoggerConstructor);
 
     /*
      * Adding event listener for specified event. Function checks if event with provided name
@@ -218,7 +255,7 @@ define(function() {
         // Checking if user-provided event name is string.
         if (typeof eventName !== 'string') {
             message = 'Please provide appropriate event name (string). No event created.';
-            this.writeToConsole(message);
+            printConsole(message);
             return this;
         }
 
@@ -229,7 +266,7 @@ define(function() {
             };
         } else {
             message = 'Event with that name already exist. No event created.';
-            this.writeToConsole(message);
+            printConsole(message);
         }
 
         return this;
@@ -249,7 +286,7 @@ define(function() {
             delete this.events[eventName];
         } else {
             message = 'There is no such event. Nothing to remove.';
-            this.writeToConsole(message);
+            printConsole(message);
         }
         
         return this;
@@ -274,25 +311,26 @@ define(function() {
             if (callback && typeof callback === 'function') this.events[eventName].callback.call(this);
 
             message = 'Event \'' + eventName + '\' occured.';
+            var renderedMessage = renderMessageString(message, this.dateFormat, this.name);
             switch (notificationType) {
                 case 'alert':
-                    this.writeToAlert(message);
+                    printAlert(renderedMessage);
                     break;
                 case 'window':
-                    this.writeToWindow(message);
+                    printWindow(renderedMessage, this.color);
                     break;
                 case 'remote':
-                    this.writeToRemote(message);
+                    printRemote(renderedMessage);
                     break;
                 default:
-                    this.writeToConsole(message);
+                    printConsole(renderedMessage);
                     break;
             }
         
         } else {
 
             message = 'There is no such event. No event was dispatched.';
-            this.writeToConsole(message);
+            printConsole(message);
 
         }
 
